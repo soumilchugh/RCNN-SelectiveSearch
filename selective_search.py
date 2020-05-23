@@ -135,29 +135,7 @@ def calculate_similarlity(img,neighbours,verbose=False):
 
 
 def merge_regions(r1, r2):
-    '''
-    Suppose r1 and r2 look like: 
-    
-    (minx1, miny1)
-          _____________________
-          |                   |
-          |     (minx2,maxy2) |
-          |           ________|____ 
-          |          |        |    |
-          |          |        |    |
-          |          |________|____|(maxx2, maxy2)
-          |___________________|(maxx1, maxy1)
-          
-    Then for merged region,
-    
-    minx : minx1
-    miny : miny1
-    maxx : maxx2
-    maxy : maxy1 
-    size : the number of pixels in the two regions (intersection is counted twice?)
-    
-                         
-    '''
+    # Union of the two regions
     new_size = r1["size"] + r2["size"]
     rt = {
         "min_x": min(r1["min_x"], r2["min_x"]),
@@ -174,17 +152,6 @@ def merge_regions(r1, r2):
 
 
 def merge_regions_in_order(S,R,imsize, verbose=False):
-    '''
-    == Input ==
-    S : similarity dictionary
-    
-    R : dictionary of proposed regions
-    
-    == Output ==
-    
-    regions : list of regions
-    
-    '''
     # hierarchal search
     while S != {}:
 
@@ -234,25 +201,13 @@ def merge_regions_in_order(S,R,imsize, verbose=False):
 scale    = 1.0
 sigma    = 0.8
 min_size = 500
-
-# import 8 bits degital image (each digit ranges between 0 - 255)
-#img_8bit  = scipy.misc.imread(os.path.join(img_dir,imgnm))
     
 image = cv2.imread("dog.jpg")
 img  = image_segmentation(image.astype(float), scale, sigma, min_size)
 img = img.astype(np.uint8)
 
 R = extractRegion(img)
-
-for item in R.values():
-    x1 = item["min_x"]
-    y1 = item["min_y"]
-    x2 = item["max_x"]
-    y2 = item["max_y"]
-    cv2.rectangle(image,(x1,y1), (x2,y2), 255,1)
-#cv2.imshow("image",image)
-#cv2.waitKey(0)
-print("{} rectangle regions are found".format(len(R)))
+print("{} initial rectangle regions are found".format(len(R)))
 tex_grad = calc_texture_gradient(image)
 hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 calc_hist(image)
@@ -264,11 +219,10 @@ for k, v in list(R.items()):
 neighbours = extract_neighbours(R)
 S = calculate_similarlity(img,neighbours,verbose=True)
 i, j = sorted(S.items(), key=lambda i: i[1])[-1][0]
-print (i,j)
 regions = merge_regions_in_order(S,R,img.shape[0]*img.shape[1],verbose=True)
+print("{} final rectangle regions are found".format(len(regions)))
 for item in (regions):
     x1, y1, width, height = item["rect"]
-    #label = item["labels"][:5]
     x2 = x1 + width
     y2 = y1 + height
     cv2.rectangle(image,(x1,y1), (x2,y2), 255,1)
