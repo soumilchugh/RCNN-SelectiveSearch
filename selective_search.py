@@ -5,28 +5,16 @@ import skimage.segmentation
 import skimage.feature
 
 def image_segmentation(img, scale = 1.0, sigma = 0.8, min_size = 50):
-    '''
-    J.R.R. Uijlings's hierarchical grouping algorithm 
     
-    == input ==
-    img_8bit : shape = (height, width, 3),
-               8-bits degital image (each digit ranges between 0 - 255)
-    
-    == output ==
-    img      : shape = (height, width, 4)
-    '''
-    # convert the image to range between 0 and 1
     im_mask   = skimage.segmentation.felzenszwalb(
                     img, 
                     scale    = scale, 
                     sigma    = sigma,
                     min_size = min_size)
-    #img       = np.dstack([img,im_mask])
     return im_mask
 
 def extractRegion(img):
     R = {}
-
     for y in range(img.shape[0]):
         for x in range(img.shape[1]):
             l = img[y][x]
@@ -50,16 +38,7 @@ def extractRegion(img):
             del Rcopy[key]
     return(Rcopy)
 
-def calc_texture_gradient(img):
-    """
-        calculate texture gradient for entire image
-
-        The original SelectiveSearch algorithm proposed Gaussian derivative
-        for 8 orientations, but we use LBP instead.
-
-        output will be [height(*)][width(*)]
-    """
-    
+def calc_texture_gradient(img):    
     ret = np.zeros(img.shape[:3])
     for colour_channel in (0, 1, 2):
         ret[:, :, colour_channel] = skimage.feature.local_binary_pattern(
@@ -69,31 +48,15 @@ def calc_texture_gradient(img):
     
 
 def calc_hist(img, minhist=0, maxhist=1):
-    """
-        calculate colour histogram for each region
-
-        the size of output histogram will be BINS * COLOUR_CHANNELS(3)
-
-        number of bins is 25 as same as [uijlings_ijcv2013_draft.pdf]
-        
-        len(hist) = BINS * 3
-        hist[:BINS] = [0, 10, 20, 0,...,0] meaning that 
-           there are 10 pixels that have values between (maxhist - minhist)/BINS*1 and (maxhist - minhist)/BINS*2
-           there are 10 pixels that have values between (maxhist - minhist)/BINS*2 and (maxhist - minhist)/BINS*3
-    
-    """
 
     BINS = 25
     hist = np.array([])
 
     for colour_channel in range(3):
-
         # extracting one colour channel
         c = img[:, colour_channel]
-
         # calculate histogram for each colour and join to the result
         hist = np.concatenate([hist] + [np.histogram(c, BINS, (minhist, maxhist))[0]])
-        #print (np.histogram(c, BINS, (minhist, maxhist)))
 
     # L1 normalize
     hist = hist / len(img)
@@ -270,8 +233,7 @@ def merge_regions_in_order(S,R,imsize, verbose=False):
 
 scale    = 1.0
 sigma    = 0.8
-# min_size may be around 50 for better RCNN performance but for the sake of visualization, I will stick to min_size =500
-min_size = 500 # 500 3000
+min_size = 500
 
 # import 8 bits degital image (each digit ranges between 0 - 255)
 #img_8bit  = scipy.misc.imread(os.path.join(img_dir,imgnm))
@@ -295,8 +257,6 @@ tex_grad = calc_texture_gradient(image)
 hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 calc_hist(image)
 for k, v in list(R.items()):
-    ## height and width axies are flattened. 
-    ## masked_pixel.shape = (N pixel with this mask ID , 3)
     masked_pixels  = hsv[img == k]
     R[k]["size"]   = len(masked_pixels / 4)
     R[k]["hist_c"] = calc_hist(masked_pixels,minhist=0, maxhist=1)
@@ -314,23 +274,3 @@ for item in (regions):
     cv2.rectangle(image,(x1,y1), (x2,y2), 255,1)
 cv2.imshow("image",image)
 cv2.waitKey(0)
-
-
-'''
-brightLAB = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
-Lchannel = brightLAB[:,:,0]   # Lightness component
-achannel = brightLAB[:,:,1]	  # Color component
-bchannel = brightLAB[:,:,2]   # Color Component
-
-Hchannel = hsvImage[:,:,0]   # Lightness component
-Schannel = hsvImage[:,:,1]	  # Color component
-Vchannel = hsvImage[:,:,2]   # Color Component
-
-cv2.imshow("image",Hchannel)
-cv2.waitKey(0)
-cv2.imshow("image1", Schannel)
-cv2.waitKey(0)
-cv2.imshow("image2", Vchannel)
-cv2.waitKey(0)
-
-'''
